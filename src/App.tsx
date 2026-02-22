@@ -44,6 +44,7 @@ export default function App() {
   const [showButton, setShowButton] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [leadData, setLeadData] = useState({ name: '', email: '', phone: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleOpenModal = () => {
     setShowModal(true);
@@ -54,8 +55,10 @@ export default function App() {
     }
   };
 
-  const handleLeadSubmit = (e: React.FormEvent) => {
+  const handleLeadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+    setIsSubmitting(true);
 
     if (typeof (window as any).fbq === 'function') {
       // Confirmação de Lead capturado
@@ -66,6 +69,19 @@ export default function App() {
       (window as any).fbq('track', 'InitiateCheckout', {
         content_name: 'Checkout_VSL',
       });
+    }
+
+    // Enviar dados para o Webhook
+    try {
+      await fetch("https://autowebhook.mgtinc.cloud/webhook/LEADS-ARSENAL", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(leadData),
+      });
+    } catch (error) {
+      console.error("Erro ao enviar lead para o webhook:", error);
     }
 
     // Redirect to Cakto checkout with user data potentially added as query params
@@ -142,9 +158,10 @@ export default function App() {
               </div>
               <button
                 type="submit"
-                className="w-full bg-white hover:bg-gray-200 text-black font-semibold text-lg py-4 rounded-xl transition-all duration-300 mt-6 tracking-tight"
+                disabled={isSubmitting}
+                className="w-full bg-white hover:bg-gray-200 text-black font-semibold text-lg py-4 rounded-xl transition-all duration-300 mt-6 tracking-tight disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Continuar
+                {isSubmitting ? 'Processando...' : 'Continuar'}
               </button>
             </form>
           </div>
@@ -205,7 +222,7 @@ export default function App() {
         {/* CTA Button (Delayed) */}
         <div className={`mt-16 transition-all duration-1000 transform flex flex-col items-center w-full ${showButton ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0 pointer-events-none'}`}>
           <button
-            onClick={() => setShowModal(true)}
+            onClick={handleOpenModal}
             className="bg-white hover:bg-gray-200 text-black font-semibold text-lg md:text-xl py-4 px-10 md:px-14 rounded-full transition-all duration-300 w-full md:w-auto tracking-tight"
           >
             Quero ter acesso agora
